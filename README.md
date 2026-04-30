@@ -27,7 +27,29 @@ This project is designed for agent-assisted Mirth operations where the agent can
 
 ## Quickstart
 
-Install the skill with the shared Skills CLI, the same flow used by repositories such as `mattpocock/skills`:
+For a full Mirth operator install, use this repository's installer:
+
+```bash
+npx github:DinhLucent/mirth-connect-skills full
+```
+
+That installs:
+
+- the Codex skill into `.agents/skills/mirth-connect-operator`
+- the Python tool server into `mirth-agent-tools`
+- Python package dependencies with the optional MCP extra
+- a local `mirth-agent-tools/.env` copied from `.env.example`
+
+Then edit `mirth-agent-tools/.env` with your Mirth URL and credentials:
+
+```bash
+cd mirth-agent-tools
+mirth-agent-tools health_check
+```
+
+## Skill-Only Install
+
+The shared Skills CLI flow used by repositories such as `mattpocock/skills` is supported:
 
 ```bash
 npx skills@latest add DinhLucent/mirth-connect-skills
@@ -39,14 +61,20 @@ For a non-interactive Codex install:
 npx skills@latest add DinhLucent/mirth-connect-skills --agent codex --skill mirth-connect-operator -y --copy
 ```
 
-This installs the Codex skill instructions only. To also install the Python REST/MCP tool server, use the full installer below.
+This installs the Codex skill instructions only. It does not install `mirth-agent-tools`, Python dependencies, MCP runtime, or `.env`. For full-access operation, use `npx github:DinhLucent/mirth-connect-skills full`.
 
 ## Full Tool-Server Install
 
-Install the skill and Python tools into the current project:
+Install the skill and Python tools into the current project without running pip:
 
 ```bash
 npx github:DinhLucent/mirth-connect-skills init
+```
+
+Install everything in one command:
+
+```bash
+npx github:DinhLucent/mirth-connect-skills init --install-python --install-mcp --create-env
 ```
 
 Install globally for the current user:
@@ -102,7 +130,8 @@ mirth-agent-tools health_check
 ## npx Options
 
 ```bash
-mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--skip-tools] [--install-python] [--install-mcp]
+mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--skip-tools] [--install-python] [--install-mcp] [--create-env]
+mirth-connect-skills full [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--python <cmd>]
 ```
 
 - `--target <dir>` installs into a specific project directory.
@@ -113,6 +142,7 @@ mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--leg
 - `--skip-tools` installs only the Codex skill.
 - `--install-python` runs `python -m pip install -e ".[dev]"` inside the installed tool server.
 - `--install-mcp` adds the optional MCP extra to `--install-python`.
+- `--create-env` copies `.env.example` to `.env` if `.env` does not exist.
 
 ## Repository Layout
 

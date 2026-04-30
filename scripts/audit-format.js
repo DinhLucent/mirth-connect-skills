@@ -10,6 +10,7 @@ const requiredFiles = [
   "mirth-agent-tools/.env.example",
   "mirth-connect-operator/SKILL.md",
   "mirth-connect-operator/agents/openai.yaml",
+  ".claude-plugin/plugin.json",
   "README.md",
   "bin/mirth-connect-skills.js",
   "package.json",

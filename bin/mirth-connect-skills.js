@@ -24,7 +24,11 @@ function main(argv) {
     return;
   }
 
-  if (command !== "init") {
+  if (command === "full") {
+    options.installPython = true;
+    options.installMcp = true;
+    options.createEnv = true;
+  } else if (command !== "init") {
     fail(`Unknown command: ${command}`);
   }
 
@@ -42,6 +46,7 @@ function parseOptions(argv) {
     dryRun: false,
     installPython: false,
     installMcp: false,
+    createEnv: false,
     python: process.env.PYTHON || "python",
     help: false
   };
@@ -66,6 +71,8 @@ function parseOptions(argv) {
       options.installPython = true;
     } else if (arg === "--install-mcp") {
       options.installMcp = true;
+    } else if (arg === "--create-env") {
+      options.createEnv = true;
     } else if (arg === "--python") {
       options.python = requireValue(argv, ++index, "--python");
     } else if (arg === "--help" || arg === "-h") {
@@ -113,6 +120,9 @@ function install(options) {
   }
   if (!options.skipTools) {
     copyDirectory(sourceTools, toolsDest, options);
+    if (options.createEnv) {
+      createEnvFile(toolsDest, options);
+    }
   }
 
   if (options.installPython && !options.skipTools && !options.dryRun) {
@@ -129,7 +139,7 @@ function install(options) {
     console.log(`Tools: ${toolsDest}`);
   }
   console.log("");
-  printNextSteps(options.global, toolsDest, options.skipTools);
+  printNextSteps(options, toolsDest);
 }
 
 function copyDirectory(source, dest, options) {
@@ -167,19 +177,47 @@ function installPythonPackage(python, toolsDest, installMcp) {
   }
 }
 
-function printNextSteps(isGlobal, toolsDest, skipTools) {
-  if (skipTools) {
+function createEnvFile(toolsDest, options) {
+  const source = path.join(toolsDest, ".env.example");
+  const dest = path.join(toolsDest, ".env");
+
+  if (options.dryRun) {
+    console.log(`[dry-run] copy ${source} -> ${dest}`);
+    return;
+  }
+
+  if (!fs.existsSync(source)) {
+    fail(`Cannot create .env because .env.example is missing: ${source}`);
+  }
+
+  if (fs.existsSync(dest)) {
+    console.log(`Env file already exists, leaving it unchanged: ${dest}`);
+    return;
+  }
+
+  fs.copyFileSync(source, dest);
+  console.log(`Created env file: ${dest}`);
+}
+
+function printNextSteps(options, toolsDest) {
+  if (options.skipTools) {
     console.log("Next: configure an MCP/tool server separately for the Mirth REST tools.");
     return;
   }
 
   console.log("Next steps:");
   console.log(`  cd "${toolsDest}"`);
-  console.log('  python -m pip install -e ".[dev]"');
-  console.log('  # optional MCP server: python -m pip install -e ".[mcp]"');
-  console.log("  copy .env.example .env");
+  if (!options.installPython) {
+    console.log('  python -m pip install -e ".[dev]"');
+    console.log('  # optional MCP server: python -m pip install -e ".[mcp]"');
+  }
+  if (!options.createEnv) {
+    console.log("  copy .env.example .env");
+  } else {
+    console.log("  # edit .env with your Mirth URL and credentials");
+  }
   console.log("  mirth-agent-tools health_check");
-  if (isGlobal) {
+  if (options.global) {
     console.log("");
     console.log("Global skill install used ~/.agents/skills.");
   }
@@ -190,7 +228,9 @@ function printHelp() {
 
 Usage:
   mirth-connect-skills init [options]
+  mirth-connect-skills full [options]
   mirth-skills init [options]
+  mirth-skills full [options]
 
 Options:
   --target <dir>      Project directory for project install. Default: current directory.
@@ -201,13 +241,16 @@ Options:
   --skip-tools        Install only the Codex skill.
   --install-python    Run python -m pip install -e ".[dev]" after copying tools.
   --install-mcp       With --install-python, include the optional MCP extra.
+  --create-env        Copy .env.example to .env if .env does not exist.
   --python <cmd>      Python executable for --install-python. Default: python.
   --dry-run           Print planned copy operations without writing.
   --help, -h          Show this help.
 
 Examples:
   npx github:DinhLucent/mirth-connect-skills init
+  npx github:DinhLucent/mirth-connect-skills full
   npx github:DinhLucent/mirth-connect-skills init --global
+  npx github:DinhLucent/mirth-connect-skills init --install-python --install-mcp --create-env
   npm install -g github:DinhLucent/mirth-connect-skills
   mirth-connect-skills init --target ./my-project
 `);

@@ -43,6 +43,12 @@ const checks = [
     cwd: root
   },
   {
+    name: "full installer dry-run",
+    command: "node",
+    args: ["bin/mirth-connect-skills.js", "full", "--target", ".npx-smoke", "--dry-run"],
+    cwd: root
+  },
+  {
     name: "npm pack dry-run",
     command: "npm",
     args: ["pack", "--dry-run"],
