@@ -3,6 +3,8 @@
 node_modules/
 *.tgz
 .npx-smoke/
+.npx-mirth-smoke/
+.mirth/
 .agents/
 skills-lock.json
 

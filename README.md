@@ -36,14 +36,15 @@ npx github:DinhLucent/mirth-connect-skills full
 That installs:
 
 - the Codex skill into `.agents/skills/mirth-connect-operator`
-- the Python tool server into `mirth-agent-tools`
+- the Python tool server into `.mirth/mirth-agent-tools`
 - Python package dependencies with the optional MCP extra
-- a local `mirth-agent-tools/.env` copied from `.env.example`
+- a local `.mirth/mirth-agent-tools/.env` copied from `.env.example`
+- `.mirth/.gitignore` to keep `.env`, backups, and logs out of git
 
-Then edit `mirth-agent-tools/.env` with your Mirth URL and credentials:
+Then edit `.mirth/mirth-agent-tools/.env` with your Mirth URL and credentials:
 
 ```bash
-cd mirth-agent-tools
+cd .mirth/mirth-agent-tools
 mirth-agent-tools health_check
 ```
 
@@ -77,6 +78,12 @@ Install everything in one command:
 npx github:DinhLucent/mirth-connect-skills init --install-python --install-mcp --create-env
 ```
 
+Install the tool runtime under a hidden project folder:
+
+```bash
+npx github:DinhLucent/mirth-connect-skills init --mirth-dir .mirth --install-python --install-mcp --create-env
+```
+
 Install globally for the current user:
 
 ```bash
@@ -103,7 +110,7 @@ mirth-connect-skills init --global
 - Admin install: `/etc/codex/skills/mirth-connect-operator`
 - Legacy Codex fallback: `.codex/skills/mirth-connect-operator` with `--legacy-codex`
 
-The installer also copies the Python tools to `mirth-agent-tools` for project installs, or to `~/.agents/tools/mirth-agent-tools` for user/global installs.
+The installer copies the Python tools to `mirth-agent-tools` for plain project `init` installs, `.mirth/mirth-agent-tools` for project `full` installs, or `~/.agents/tools/mirth-agent-tools` for user/global installs. Use `--mirth-dir <dir>` to choose a different hidden project runtime directory. When a project-local runtime directory is used, the installer writes `<dir>/.gitignore` so credentials and runtime logs are not committed accidentally.
 
 ## Configure Mirth Tools
 
@@ -130,8 +137,8 @@ mirth-agent-tools health_check
 ## npx Options
 
 ```bash
-mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--skip-tools] [--install-python] [--install-mcp] [--create-env]
-mirth-connect-skills full [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--python <cmd>]
+mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--skip-tools] [--install-python] [--install-mcp] [--create-env] [--mirth-dir <dir>]
+mirth-connect-skills full [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--python <cmd>] [--mirth-dir <dir>]
 ```
 
 - `--target <dir>` installs into a specific project directory.
@@ -143,6 +150,8 @@ mirth-connect-skills full [--target <dir>] [--global] [--admin] [--force] [--leg
 - `--install-python` runs `python -m pip install -e ".[dev]"` inside the installed tool server.
 - `--install-mcp` adds the optional MCP extra to `--install-python`.
 - `--create-env` copies `.env.example` to `.env` if `.env` does not exist.
+- `--mirth-dir <dir>` installs project-local tools under `<dir>/mirth-agent-tools`; `full` defaults to `.mirth`.
+- `--dot-mirth` is an alias for `--mirth-dir .mirth`.
 
 ## Repository Layout
 

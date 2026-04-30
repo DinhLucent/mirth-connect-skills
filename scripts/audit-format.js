@@ -66,6 +66,8 @@ const readmeExpectations = [
   ".agents/skills/mirth-connect-operator",
   "~/.agents/skills/mirth-connect-operator",
   "/etc/codex/skills/mirth-connect-operator",
+  ".mirth/mirth-agent-tools",
+  "--mirth-dir",
   "--legacy-codex",
   "npm run check"
 ];
@@ -91,7 +93,7 @@ for (const expected of ["interface:", "policy:", "dependencies:", "type: \"mcp\"
 }
 
 const installer = fs.readFileSync(path.join(root, "bin", "mirth-connect-skills.js"), "utf8");
-for (const expected of [".agents", "/etc/codex", ".codex", "--legacy-codex"]) {
+for (const expected of [".agents", "/etc/codex", ".codex", ".mirth", "--mirth-dir", "--legacy-codex"]) {
   if (!installer.includes(expected)) {
     failures.push(`bin/mirth-connect-skills.js: missing ${expected}`);
   }
