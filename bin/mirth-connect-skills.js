@@ -89,12 +89,10 @@ function install(options) {
   assertDirectory(sourceTools);
 
   const userAgentsHome = path.join(os.homedir(), ".agents");
-  const adminCodexHome = process.platform === "win32"
-    ? path.join(process.env.ProgramData || "C:\\ProgramData", "codex")
-    : path.join(path.parse(process.cwd()).root, "etc", "codex");
-  const targetRoot = path.resolve(options.global ? userAgentsHome : options.admin ? adminCodexHome : options.target);
+  const adminCodexHome = "/etc/codex";
+  const targetRoot = options.admin ? adminCodexHome : path.resolve(options.global ? userAgentsHome : options.target);
   const skillDest = options.admin
-    ? path.join(targetRoot, "skills", skillName)
+    ? path.posix.join(targetRoot, "skills", skillName)
     : options.global
       ? path.join(targetRoot, "skills", skillName)
       : path.join(targetRoot, ".agents", "skills", skillName);
@@ -104,7 +102,7 @@ function install(options) {
       : path.join(path.resolve(options.target), ".codex", "skills", skillName)
     : null;
   const toolsDest = options.admin
-    ? path.join(targetRoot, toolName)
+    ? path.posix.join(targetRoot, toolName)
     : options.global
       ? path.join(targetRoot, "tools", toolName)
       : path.join(targetRoot, toolName);
