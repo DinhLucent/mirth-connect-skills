@@ -1,0 +1,31 @@
+{
+  "name": "mirth-connect-skills",
+  "version": "0.1.0",
+  "description": "Install Codex Mirth Connect full-access skill and tool server.",
+  "type": "module",
+  "bin": {
+    "mirth-connect-skills": "bin/mirth-connect-skills.js",
+    "mirth-skills": "bin/mirth-connect-skills.js"
+  },
+  "files": [
+    "bin/",
+    "mirth-agent-tools/",
+    "mirth-connect-operator/",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "python -m pytest mirth-agent-tools && node bin/mirth-connect-skills.js init --target .npx-smoke --dry-run && npm pack --dry-run"
+  },
+  "keywords": [
+    "codex",
+    "mirth",
+    "mirth-connect",
+    "mcp",
+    "skills"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

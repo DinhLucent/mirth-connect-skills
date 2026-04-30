@@ -1,0 +1,14 @@
+.env
+.DS_Store
+node_modules/
+*.tgz
+.npx-smoke/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+mirth-agent-tools/backups/*
+!mirth-agent-tools/backups/.gitkeep
+mirth-agent-tools/logs/*
+!mirth-agent-tools/logs/.gitkeep

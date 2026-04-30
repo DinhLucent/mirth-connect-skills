@@ -1,0 +1,5 @@
+<channel version="4.5.0">
+  <id>sample-channel-id</id>
+  <name>Sample Channel</name>
+  <description>Sample fixture channel</description>
+</channel>

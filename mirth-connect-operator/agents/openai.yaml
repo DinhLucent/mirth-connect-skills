@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mirth Connect Operator"
+  short_description: "Operate Mirth via API tools."
+  default_prompt: "Use this skill to operate Mirth Connect through controlled REST API tools, XML backups, audit logging, rollback, and CLI fallback."
