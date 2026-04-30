@@ -1,4 +1,12 @@
 interface:
   display_name: "Mirth Connect Operator"
-  short_description: "Operate Mirth via API tools."
-  default_prompt: "Use this skill to operate Mirth Connect through controlled REST API tools, XML backups, audit logging, rollback, and CLI fallback."
+  short_description: "Operate Mirth Connect via controlled REST/MCP tools."
+  default_prompt: "Use this skill to inspect, backup, update, deploy, and troubleshoot Mirth Connect safely."
+policy:
+  allow_implicit_invocation: false
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "mirth-agent-tools"
+      description: "Local MCP server exposing Mirth Connect REST operations."
+      transport: "stdio"

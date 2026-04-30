@@ -11,6 +11,7 @@ from .client import MirthClient
 from .config import Settings
 from .discovery import discover_api
 from .errors import MirthBlocked
+from .redaction import redact_phi
 from .safety import require_destructive_allowed, require_write_allowed
 from .xml_utils import diff_xml
 
@@ -57,6 +58,24 @@ def run_tool(
     backup_path: BackupPath = None,
 ) -> dict[str, Any]:
     client = MirthClient(**settings.as_client_kwargs())
+    if write and settings.dry_run:
+        audit_path = write_audit_event(
+            log_dir=settings.log_dir,
+            environment=settings.environment,
+            tool=action,
+            actor=settings.actor,
+            result="dry_run",
+            channel_id=channel_id,
+            backup_path=_resolve_backup_path(backup_path),
+            details=audit_details,
+        )
+        return tool_result(
+            ok=True,
+            action=action,
+            environment=settings.environment,
+            data={"dry_run": True, "skipped": action},
+            evidence=[f"Skipped {action} because MIRTH_DRY_RUN=true", f"Audit log: {audit_path}"],
+        )
     try:
         data = fn(client)
         resolved_backup_path = _resolve_backup_path(backup_path)
@@ -160,12 +179,18 @@ def export_channel(channel_id: str, settings: Settings | None = None) -> dict[st
     return run_tool("mirth.export_channel", active, lambda client: client.get_channel_xml(channel_id))
 
 
-def import_channel(channel_xml: str, override: bool = True, deploy: bool = False, settings: Settings | None = None) -> dict[str, Any]:
+def import_channel(
+    channel_xml: str,
+    override: bool = True,
+    deploy: bool = False,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
     active = settings or Settings.from_env()
     backup_holder: dict[str, str] = {}
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_write_allowed(active)
+        require_write_allowed(active, approval_token)
         pre_backup = client.backup_all_channels(active.backup_dir)
         backup_holder["path"] = ",".join(str(path) for path in pre_backup)
         response = client.import_channel_xml(channel_xml, override=override)
@@ -184,12 +209,19 @@ def import_channel(channel_xml: str, override: bool = True, deploy: bool = False
     )
 
 
-def update_channel(channel_id: str, channel_xml: str, override: bool = True, deploy: bool = False, settings: Settings | None = None) -> dict[str, Any]:
+def update_channel(
+    channel_id: str,
+    channel_xml: str,
+    override: bool = True,
+    deploy: bool = False,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
     active = settings or Settings.from_env()
     backup_holder: dict[str, str] = {}
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_write_allowed(active)
+        require_write_allowed(active, approval_token)
         old_xml = client.get_channel_xml(channel_id)
         backup = client.backup_channel(channel_id, active.backup_dir)
         backup_holder["path"] = str(backup)
@@ -213,12 +245,12 @@ def update_channel(channel_id: str, channel_xml: str, override: bool = True, dep
     )
 
 
-def delete_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
+def delete_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
     active = settings or Settings.from_env()
     backup_holder: dict[str, str] = {}
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_destructive_allowed(active)
+        require_destructive_allowed(active, approval_token)
         backup = client.backup_channel(channel_id, active.backup_dir)
         backup_holder["path"] = str(backup)
         undeploy_response = client.undeploy_channel(channel_id)
@@ -228,12 +260,12 @@ def delete_channel(channel_id: str, settings: Settings | None = None) -> dict[st
     return run_tool("mirth.delete_channel", active, _run, write=True, channel_id=channel_id, backup_path=lambda: backup_holder.get("path"))
 
 
-def deploy_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
+def deploy_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
     active = settings or Settings.from_env()
     backup_holder: dict[str, str] = {}
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_write_allowed(active)
+        require_write_allowed(active, approval_token)
         backup = client.backup_channel(channel_id, active.backup_dir)
         backup_holder["path"] = str(backup)
         response = client.deploy_channel(channel_id)
@@ -242,12 +274,12 @@ def deploy_channel(channel_id: str, settings: Settings | None = None) -> dict[st
     return run_tool("mirth.deploy_channel", active, _run, write=True, channel_id=channel_id, backup_path=lambda: backup_holder.get("path"))
 
 
-def undeploy_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
+def undeploy_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
     active = settings or Settings.from_env()
     backup_holder: dict[str, str] = {}
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_write_allowed(active)
+        require_write_allowed(active, approval_token)
         backup = client.backup_channel(channel_id, active.backup_dir)
         backup_holder["path"] = str(backup)
         response = client.undeploy_channel(channel_id)
@@ -256,12 +288,12 @@ def undeploy_channel(channel_id: str, settings: Settings | None = None) -> dict[
     return run_tool("mirth.undeploy_channel", active, _run, write=True, channel_id=channel_id, backup_path=lambda: backup_holder.get("path"))
 
 
-def redeploy_all(settings: Settings | None = None) -> dict[str, Any]:
+def redeploy_all(approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
     active = settings or Settings.from_env()
     backup_holder: dict[str, str] = {}
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_destructive_allowed(active)
+        require_destructive_allowed(active, approval_token)
         backups = client.backup_all_channels(active.backup_dir)
         backup_holder["path"] = ",".join(str(path) for path in backups)
         response = client.redeploy_all()
@@ -270,7 +302,12 @@ def redeploy_all(settings: Settings | None = None) -> dict[str, Any]:
     return run_tool("mirth.redeploy_all", active, _run, write=True, backup_path=lambda: backup_holder.get("path"))
 
 
-def channel_lifecycle_action(action_name: str, channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
+def channel_lifecycle_action(
+    action_name: str,
+    channel_id: str,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
     active = settings or Settings.from_env()
     action_map = {
         "start": "_start",
@@ -290,30 +327,30 @@ def channel_lifecycle_action(action_name: str, channel_id: str, settings: Settin
         )
 
     def _run(client: MirthClient) -> str:
-        require_write_allowed(active)
+        require_write_allowed(active, approval_token)
         return client.channel_action(channel_id, action_map[action_name])
 
     return run_tool(f"mirth.{action_name}_channel", active, _run, write=True, channel_id=channel_id)
 
 
-def start_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
-    return channel_lifecycle_action("start", channel_id, settings)
+def start_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
+    return channel_lifecycle_action("start", channel_id, approval_token, settings)
 
 
-def stop_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
-    return channel_lifecycle_action("stop", channel_id, settings)
+def stop_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
+    return channel_lifecycle_action("stop", channel_id, approval_token, settings)
 
 
-def pause_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
-    return channel_lifecycle_action("pause", channel_id, settings)
+def pause_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
+    return channel_lifecycle_action("pause", channel_id, approval_token, settings)
 
 
-def resume_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
-    return channel_lifecycle_action("resume", channel_id, settings)
+def resume_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
+    return channel_lifecycle_action("resume", channel_id, approval_token, settings)
 
 
-def halt_channel(channel_id: str, settings: Settings | None = None) -> dict[str, Any]:
-    return channel_lifecycle_action("halt", channel_id, settings)
+def halt_channel(channel_id: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
+    return channel_lifecycle_action("halt", channel_id, approval_token, settings)
 
 
 def get_channel_status(channel_id: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
@@ -336,11 +373,15 @@ def get_messages(
     settings: Settings | None = None,
 ) -> dict[str, Any]:
     active = settings or Settings.from_env()
-    return run_tool(
+    result = run_tool(
         "mirth.get_messages",
         active,
         lambda client: client.get_messages(channel_id, limit=limit, include_content=include_content, status=status),
     )
+    if result.get("ok") and include_content and active.redact_phi and isinstance(result.get("data"), str):
+        result["data"] = redact_phi(result["data"], active.max_message_content_chars)
+        result["evidence"].append("Redacted/truncated message content according to MIRTH_REDACT_PHI settings")
+    return result
 
 
 def get_message_count(channel_id: str, status: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
@@ -348,11 +389,16 @@ def get_message_count(channel_id: str, status: str | None = None, settings: Sett
     return run_tool("mirth.get_message_count", active, lambda client: client.get_message_count(channel_id, status=status))
 
 
-def remove_messages(channel_id: str, status: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
+def remove_messages(
+    channel_id: str,
+    status: str | None = None,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
     active = settings or Settings.from_env()
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_destructive_allowed(active)
+        require_destructive_allowed(active, approval_token)
         count_before = client.get_message_count(channel_id, status=status)
         response = client.remove_messages(channel_id, status=status)
         count_after = client.get_message_count(channel_id, status=status)
@@ -361,11 +407,15 @@ def remove_messages(channel_id: str, status: str | None = None, settings: Settin
     return run_tool("mirth.remove_messages", active, _run, write=True, channel_id=channel_id, audit_details={"status": status})
 
 
-def clear_statistics(channel_id: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
+def clear_statistics(
+    channel_id: str | None = None,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
     active = settings or Settings.from_env()
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_destructive_allowed(active)
+        require_destructive_allowed(active, approval_token)
         before = client.get_channel_statistics(channel_id)
         response = client.clear_statistics(channel_id)
         return {"statistics_before": before, "response": response}
@@ -378,11 +428,16 @@ def list_code_templates(settings: Settings | None = None) -> dict[str, Any]:
     return run_tool("mirth.list_code_templates", active, lambda client: client.list_code_templates())
 
 
-def update_code_template(code_template_id: str, code_template_xml: str, settings: Settings | None = None) -> dict[str, Any]:
+def update_code_template(
+    code_template_id: str,
+    code_template_xml: str,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
     active = settings or Settings.from_env()
 
     def _run(client: MirthClient) -> str:
-        require_write_allowed(active)
+        require_write_allowed(active, approval_token)
         return client.update_code_template(code_template_id, code_template_xml)
 
     return run_tool("mirth.update_code_template", active, _run, write=True, audit_details={"code_template_id": code_template_id})
@@ -407,11 +462,17 @@ def backup_all_channels(settings: Settings | None = None) -> dict[str, Any]:
     )
 
 
-def restore_channel(backup_path: str, override: bool = True, deploy: bool = False, settings: Settings | None = None) -> dict[str, Any]:
+def restore_channel(
+    backup_path: str,
+    override: bool = True,
+    deploy: bool = False,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
     active = settings or Settings.from_env()
 
     def _run(client: MirthClient) -> dict[str, Any]:
-        require_write_allowed(active)
+        require_write_allowed(active, approval_token)
         response = client.restore_channel(backup_path, override=override)
         deployed = client.redeploy_all() if deploy else None
         return {"response": response, "deploy_response": deployed}
@@ -430,9 +491,13 @@ def diff_channel_xml(old_xml: str, new_xml: str, settings: Settings | None = Non
     )
 
 
-def run_cli_command(command: str, settings: Settings | None = None) -> dict[str, Any]:
+def run_cli_command(command: str, approval_token: str | None = None, settings: Settings | None = None) -> dict[str, Any]:
     active = settings or Settings.from_env()
-    return run_tool("mirth.run_cli_command", active, lambda _client: run_mccommand(active, command), write=True)
+    def _run(_: MirthClient) -> dict[str, object]:
+        require_write_allowed(active, approval_token)
+        return run_mccommand(active, command)
+
+    return run_tool("mirth.run_cli_command", active, _run, write=True)
 
 
 def read_server_logs(log_path: str | Path, tail_lines: int = 200, settings: Settings | None = None) -> dict[str, Any]:
@@ -449,6 +514,175 @@ def read_server_logs(log_path: str | Path, tail_lines: int = 200, settings: Sett
         return {"path": str(path), "lines": lines[-tail_lines:]}
 
     return run_tool("mirth.read_server_logs", active, _read)
+
+
+def plan_operation(
+    operation: str,
+    channel_id: str | None = None,
+    deploy: bool = False,
+    include_content: bool = False,
+    status: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
+    active = settings
+    environment = active.environment if active else os.getenv("MIRTH_ENV", "dev")
+    operation = operation.strip()
+    write_ops = {
+        "import_channel",
+        "update_channel",
+        "deploy_channel",
+        "undeploy_channel",
+        "start_channel",
+        "stop_channel",
+        "pause_channel",
+        "resume_channel",
+        "halt_channel",
+        "update_code_template",
+        "restore_channel",
+    }
+    destructive_ops = {"delete_channel", "redeploy_all", "remove_messages", "clear_statistics"}
+
+    plans: dict[str, list[str]] = {
+        "deploy_channel": ["health_check", "discover_api", "get_channel", "backup_channel", "get_channel_status", "deploy_channel", "get_channel_status"],
+        "undeploy_channel": ["health_check", "discover_api", "get_channel", "backup_channel", "undeploy_channel", "get_channel_status"],
+        "update_channel": ["health_check", "discover_api", "get_channel", "backup_channel", "diff_channel_xml", "update_channel", "deploy_channel optional", "get_channel_status"],
+        "import_channel": ["health_check", "discover_api", "backup_all_channels", "import_channel", "redeploy_all optional"],
+        "delete_channel": ["health_check", "discover_api", "get_channel", "backup_channel", "undeploy_channel", "delete_channel"],
+        "redeploy_all": ["health_check", "discover_api", "backup_all_channels", "redeploy_all", "get_channel_status"],
+        "remove_messages": ["health_check", "discover_api", "get_message_count", "remove_messages", "get_message_count"],
+        "clear_statistics": ["health_check", "discover_api", "get_channel_statistics", "clear_statistics", "get_channel_statistics"],
+        "start_channel": ["health_check", "get_channel_status", "start_channel", "get_channel_status"],
+        "stop_channel": ["health_check", "get_channel_status", "stop_channel", "get_channel_status"],
+        "pause_channel": ["health_check", "get_channel_status", "pause_channel", "get_channel_status"],
+        "resume_channel": ["health_check", "get_channel_status", "resume_channel", "get_channel_status"],
+        "halt_channel": ["health_check", "get_channel_status", "halt_channel", "get_channel_status"],
+        "get_messages": ["health_check", "get_message_count", "get_messages metadata-first"],
+    }
+    if operation not in plans:
+        return tool_result(
+            ok=False,
+            action="mirth.plan_operation",
+            environment=environment,
+            error=f"Unsupported operation: {operation}",
+            needs_user_input=True,
+            user_question=f"Please choose one of: {', '.join(sorted(plans))}.",
+        )
+
+    needs_channel = operation not in {"import_channel", "redeploy_all"}
+    if needs_channel and not channel_id:
+        return tool_result(
+            ok=False,
+            action="mirth.plan_operation",
+            environment=environment,
+            error="Missing channel_id.",
+            needs_user_input=True,
+            user_question="Please provide the Mirth channel_id for this operation.",
+        )
+
+    destructive = operation in destructive_ops
+    write = destructive or operation in write_ops
+    requires_approval = write and (environment == "prod" or destructive or bool(active and active.require_approval))
+    plan = {
+        "operation": operation,
+        "environment": environment,
+        "channel_id": channel_id,
+        "parameters": {
+            "deploy": deploy,
+            "include_content": include_content,
+            "status": status,
+        },
+        "prechecks": plans[operation],
+        "write": write,
+        "destructive": destructive,
+        "requires_approval": requires_approval,
+        "dry_run": bool(active and active.dry_run),
+        "rollback": _rollback_plan(operation, channel_id),
+    }
+    return tool_result(
+        ok=True,
+        action="mirth.plan_operation",
+        environment=environment,
+        data=plan,
+        evidence=["Generated local operation plan; no Mirth API call was made"],
+    )
+
+
+def execute_operation(
+    plan: dict[str, Any],
+    channel_xml: str | None = None,
+    backup_path: str | None = None,
+    code_template_id: str | None = None,
+    code_template_xml: str | None = None,
+    approval_token: str | None = None,
+    settings: Settings | None = None,
+) -> dict[str, Any]:
+    operation = str(plan.get("operation", "")).strip()
+    channel_id = plan.get("channel_id")
+    parameters = plan.get("parameters") or {}
+    deploy = bool(parameters.get("deploy", False))
+    status = parameters.get("status")
+    include_content = bool(parameters.get("include_content", False))
+
+    if operation == "deploy_channel":
+        return deploy_channel(str(channel_id), approval_token=approval_token, settings=settings)
+    if operation == "undeploy_channel":
+        return undeploy_channel(str(channel_id), approval_token=approval_token, settings=settings)
+    if operation == "update_channel":
+        if channel_xml is None:
+            return _missing_execute_input("mirth.execute_operation", "channel_xml is required for update_channel.")
+        return update_channel(str(channel_id), channel_xml, deploy=deploy, approval_token=approval_token, settings=settings)
+    if operation == "import_channel":
+        if channel_xml is None:
+            return _missing_execute_input("mirth.execute_operation", "channel_xml is required for import_channel.")
+        return import_channel(channel_xml, deploy=deploy, approval_token=approval_token, settings=settings)
+    if operation == "delete_channel":
+        return delete_channel(str(channel_id), approval_token=approval_token, settings=settings)
+    if operation == "redeploy_all":
+        return redeploy_all(approval_token=approval_token, settings=settings)
+    if operation == "remove_messages":
+        return remove_messages(str(channel_id), status=status, approval_token=approval_token, settings=settings)
+    if operation == "clear_statistics":
+        return clear_statistics(str(channel_id) if channel_id else None, approval_token=approval_token, settings=settings)
+    if operation in {"start_channel", "stop_channel", "pause_channel", "resume_channel", "halt_channel"}:
+        return globals()[operation](str(channel_id), approval_token=approval_token, settings=settings)
+    if operation == "get_messages":
+        return get_messages(str(channel_id), include_content=include_content, status=status, settings=settings)
+    if operation == "restore_channel":
+        if backup_path is None:
+            return _missing_execute_input("mirth.execute_operation", "backup_path is required for restore_channel.")
+        return restore_channel(backup_path, deploy=deploy, approval_token=approval_token, settings=settings)
+    if operation == "update_code_template":
+        if code_template_id is None or code_template_xml is None:
+            return _missing_execute_input("mirth.execute_operation", "code_template_id and code_template_xml are required.")
+        return update_code_template(code_template_id, code_template_xml, approval_token=approval_token, settings=settings)
+
+    return tool_result(
+        ok=False,
+        action="mirth.execute_operation",
+        environment=os.getenv("MIRTH_ENV", "dev"),
+        error=f"Unsupported operation: {operation}",
+        needs_user_input=True,
+        user_question="Please generate a plan with mirth.plan_operation before execution.",
+    )
+
+
+def _rollback_plan(operation: str, channel_id: str | None) -> dict[str, Any] | None:
+    if operation in {"deploy_channel", "undeploy_channel", "update_channel", "delete_channel"}:
+        return {"type": "restore_channel", "channel_id": channel_id, "backup_path": "returned by execution backup_path"}
+    if operation in {"import_channel", "redeploy_all"}:
+        return {"type": "restore_channel", "backup_path": "choose one of returned backup_paths"}
+    return None
+
+
+def _missing_execute_input(action: str, message: str) -> dict[str, Any]:
+    return tool_result(
+        ok=False,
+        action=action,
+        environment=os.getenv("MIRTH_ENV", "dev"),
+        error=message,
+        needs_user_input=True,
+        user_question=message,
+    )
 
 
 def _standardize_entrypoint(action: str) -> Callable[[F], F]:
@@ -515,3 +749,5 @@ restore_channel = _standardize_entrypoint("mirth.restore_channel")(restore_chann
 diff_channel_xml = _standardize_entrypoint("mirth.diff_channel_xml")(diff_channel_xml)
 run_cli_command = _standardize_entrypoint("mirth.run_cli_command")(run_cli_command)
 read_server_logs = _standardize_entrypoint("mirth.read_server_logs")(read_server_logs)
+plan_operation = _standardize_entrypoint("mirth.plan_operation")(plan_operation)
+execute_operation = _standardize_entrypoint("mirth.execute_operation")(execute_operation)

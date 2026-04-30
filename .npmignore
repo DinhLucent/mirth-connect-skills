@@ -7,6 +7,9 @@ node_modules/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+mirth-agent-tools/tests/.tmp/
+*.egg-info/
+mirth-agent-tools/src/*.egg-info/
 
 mirth-agent-tools/backups/*
 !mirth-agent-tools/backups/.gitkeep

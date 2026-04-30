@@ -21,9 +21,27 @@ def require_cli_fallback(settings: Settings) -> None:
         )
 
 
+def validate_cli_command(settings: Settings, command: str) -> list[str]:
+    args = shlex.split(command)
+    if not args:
+        raise MirthBlocked(
+            "Empty Mirth CLI command.",
+            "Please provide a whitelisted mccommand action such as export, import, deploy, undeploy, status, or help.",
+        )
+    action = args[0]
+    if action not in settings.cli_allowed_commands:
+        allowed = ", ".join(settings.cli_allowed_commands)
+        raise MirthBlocked(
+            f"Mirth CLI command is not allowlisted: {action}",
+            f"Please use one of the allowlisted CLI commands ({allowed}) or update MIRTH_CLI_ALLOWED_COMMANDS deliberately.",
+        )
+    return args
+
+
 def run_cli_command(settings: Settings, command: str, timeout: int | None = None) -> dict[str, object]:
+    validated_args = validate_cli_command(settings, command)
     require_cli_fallback(settings)
-    args = [settings.cli_path, *shlex.split(command)]
+    args = [settings.cli_path, *validated_args]
     completed = subprocess.run(
         args,
         capture_output=True,

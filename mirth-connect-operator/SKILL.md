@@ -21,6 +21,8 @@ Use the Mirth REST API first. Use Mirth CLI fallback only when REST is unavailab
 
 Never assume a route exists on the target Mirth version. Discovery evidence should guide endpoint choice.
 
+For write/destructive work, prefer `mirth.plan_operation` first, then `mirth.execute_operation` after prechecks and any required approval token. Direct low-level tools remain available for narrow tasks.
+
 ## Full Access Rules
 
 Write operations require `MIRTH_FULL_ACCESS=true`.
@@ -33,6 +35,8 @@ Production writes require:
 - `MIRTH_ALLOW_PROD_WRITE=true`
 
 If a required flag is disabled, return a tool result with `needs_user_input=true` and a direct question asking whether to enable the flag.
+
+When `MIRTH_REQUIRE_APPROVAL=true`, every write/destructive tool must receive the current approval token. When `MIRTH_DRY_RUN=true`, write tools must skip API mutation and return the planned/skipped action.
 
 ## Backup Rules
 
@@ -71,3 +75,5 @@ Ask for user help on:
 When reading messages, default to metadata only. Only request raw content with `include_content=true` when the user explicitly asks for message content or the task requires it.
 
 When echoing message content back to the user, mask obvious PHI where possible.
+
+The tool server redacts/truncates message content when `MIRTH_REDACT_PHI=true`; do not disable this for production troubleshooting unless the user explicitly accepts the risk.

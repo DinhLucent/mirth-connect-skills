@@ -1,6 +1,6 @@
 {
   "name": "mirth-connect-skills",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Install Codex Mirth Connect full-access skill and tool server.",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "python -m pytest mirth-agent-tools && node bin/mirth-connect-skills.js init --target .npx-smoke --dry-run && npm pack --dry-run"
+    "test": "python -m compileall mirth-agent-tools/src && python -m pytest mirth-agent-tools && node bin/mirth-connect-skills.js init --target .npx-smoke --dry-run && npm pack --dry-run"
   },
   "keywords": [
     "codex",

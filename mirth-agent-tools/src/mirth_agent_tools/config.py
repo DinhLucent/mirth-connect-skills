@@ -3,8 +3,22 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .errors import MirthBlocked
+
+
+def _load_env_file() -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+
+    env_file = os.getenv("MIRTH_ENV_FILE")
+    if env_file:
+        load_dotenv(env_file)
+    else:
+        load_dotenv()
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -12,6 +26,11 @@ def _env_bool(name: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_list(name: str) -> tuple[str, ...]:
+    value = os.getenv(name, "")
+    return tuple(item.strip() for item in value.split(",") if item.strip())
 
 
 @dataclass(frozen=True)
@@ -30,9 +49,17 @@ class Settings:
     log_dir: Path = Path("logs")
     actor: str = "ai_mirth_agent"
     timeout: int = 30
+    allowed_hosts: tuple[str, ...] = ()
+    dry_run: bool = False
+    require_approval: bool = False
+    approval_token: str | None = None
+    redact_phi: bool = True
+    max_message_content_chars: int = 4000
+    cli_allowed_commands: tuple[str, ...] = ("export", "import", "deploy", "undeploy", "status", "help")
 
     @classmethod
     def from_env(cls) -> "Settings":
+        _load_env_file()
         base_url = os.getenv("MIRTH_BASE_URL", "").strip()
         username = os.getenv("MIRTH_USERNAME", "").strip()
         password = os.getenv("MIRTH_PASSWORD", "")
@@ -52,6 +79,14 @@ class Settings:
                 "Please provide MIRTH_BASE_URL, MIRTH_USERNAME, and MIRTH_PASSWORD for the Mirth server.",
             )
 
+        allowed_hosts = _env_list("MIRTH_ALLOWED_HOSTS")
+        hostname = urlparse(base_url).hostname
+        if allowed_hosts and hostname not in allowed_hosts:
+            raise MirthBlocked(
+                f"MIRTH_BASE_URL host is not allowlisted: {hostname}",
+                "Please add this host to MIRTH_ALLOWED_HOSTS or use an approved Mirth endpoint.",
+            )
+
         return cls(
             base_url=base_url,
             username=username,
@@ -67,6 +102,14 @@ class Settings:
             log_dir=Path(os.getenv("MIRTH_LOG_DIR", "logs")),
             actor=os.getenv("MIRTH_ACTOR", "ai_mirth_agent"),
             timeout=int(os.getenv("MIRTH_TIMEOUT", "30")),
+            allowed_hosts=allowed_hosts,
+            dry_run=_env_bool("MIRTH_DRY_RUN", False),
+            require_approval=_env_bool("MIRTH_REQUIRE_APPROVAL", False),
+            approval_token=os.getenv("MIRTH_APPROVAL_TOKEN") or None,
+            redact_phi=_env_bool("MIRTH_REDACT_PHI", True),
+            max_message_content_chars=int(os.getenv("MIRTH_MAX_MESSAGE_CONTENT_CHARS", "4000")),
+            cli_allowed_commands=_env_list("MIRTH_CLI_ALLOWED_COMMANDS")
+            or ("export", "import", "deploy", "undeploy", "status", "help"),
         )
 
     def as_client_kwargs(self) -> dict[str, object]:
