@@ -1,0 +1,6 @@
+{
+  "name": "mirth-connect-skills",
+  "skills": [
+    "./mirth-connect-operator"
+  ]
+}

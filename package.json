@@ -9,6 +9,7 @@
   },
   "files": [
     "bin/",
+    ".claude-plugin/",
     "scripts/",
     "tests/*.md",
     "tests/*.py",

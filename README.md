@@ -25,9 +25,25 @@ This project is designed for agent-assisted Mirth operations where the agent can
 - Mirth Connect reachable over REST API, usually at `https://localhost:8443`.
 - A dedicated Mirth user with the permissions needed for the operations you want the agent to perform.
 
-## Install With npx
+## Quickstart
 
-Install into the current project:
+Install the skill with the shared Skills CLI, the same flow used by repositories such as `mattpocock/skills`:
+
+```bash
+npx skills@latest add DinhLucent/mirth-connect-skills
+```
+
+For a non-interactive Codex install:
+
+```bash
+npx skills@latest add DinhLucent/mirth-connect-skills --agent codex --skill mirth-connect-operator -y --copy
+```
+
+This installs the Codex skill instructions only. To also install the Python REST/MCP tool server, use the full installer below.
+
+## Full Tool-Server Install
+
+Install the skill and Python tools into the current project:
 
 ```bash
 npx github:DinhLucent/mirth-connect-skills init

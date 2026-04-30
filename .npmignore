@@ -3,6 +3,8 @@
 node_modules/
 *.tgz
 .npx-smoke/
+.agents/
+skills-lock.json
 
 __pycache__/
 *.py[cod]
