@@ -10,6 +10,10 @@ __pycache__/
 mirth-agent-tools/tests/.tmp/
 *.egg-info/
 mirth-agent-tools/src/*.egg-info/
+tests/.tmp/
+tests/reports/*.json
+tests/reports/*.jsonl
+!tests/reports/.gitkeep
 
 mirth-agent-tools/backups/*
 !mirth-agent-tools/backups/.gitkeep

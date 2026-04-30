@@ -64,4 +64,12 @@ npm run check
 
 That runs formatting/newline audit, Python compile, editable install with `dev,mcp`, pytest, npx dry-run, and npm pack dry-run.
 
+To run only the skill tool effectiveness evaluation:
+
+```bash
+npm run eval:tools
+```
+
+The evaluation starts a local mock Mirth REST API, runs the real Python tools against it, measures latency and request counts, checks backup/audit/redaction behavior, and writes a JSON report under `tests/reports/`.
+
 See [mirth-agent-tools/README.md](mirth-agent-tools/README.md) for tool usage.

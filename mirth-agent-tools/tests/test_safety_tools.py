@@ -71,3 +71,12 @@ def test_redact_phi_masks_common_hl7_fields() -> None:
     assert "19700101" not in redacted
     assert "555-123-4567" not in redacted
     assert "123-45-6789" not in redacted
+
+
+def test_redact_phi_masks_hl7_name_inside_wrapped_content() -> None:
+    text = "<content>PID|1||12345||Doe^Jane||19700101||||123 Main St||555-123-4567</content>"
+
+    redacted = redact_phi(text)
+
+    assert "Doe^Jane" not in redacted
+    assert "[REDACTED_NAME]" in redacted

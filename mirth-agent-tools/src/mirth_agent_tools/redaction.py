@@ -8,6 +8,7 @@ PHONE_RE = re.compile(r"\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4
 SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 DOB_RE = re.compile(r"\b(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\b")
 MRN_RE = re.compile(r"\b(?:MRN|Medical Record Number)[:=#\s-]*[A-Za-z0-9-]{4,}\b", re.IGNORECASE)
+HL7_NAME_RE = re.compile(r"\b[A-Z][A-Za-z'-]{1,}\^[A-Z][A-Za-z'-]{1,}(?:\^[A-Z][A-Za-z'-]{1,})?\b")
 
 
 def redact_phi(text: str, max_chars: int | None = None) -> str:
@@ -16,6 +17,7 @@ def redact_phi(text: str, max_chars: int | None = None) -> str:
     redacted = PHONE_RE.sub("[REDACTED_PHONE]", redacted)
     redacted = SSN_RE.sub("[REDACTED_SSN]", redacted)
     redacted = MRN_RE.sub("[REDACTED_MRN]", redacted)
+    redacted = HL7_NAME_RE.sub("[REDACTED_NAME]", redacted)
     redacted = DOB_RE.sub("[REDACTED_DATE]", redacted)
     if max_chars and len(redacted) > max_chars:
         return redacted[:max_chars] + "\n[TRUNCATED]"

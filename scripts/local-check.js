@@ -31,6 +31,12 @@ const checks = [
     cwd: path.join(root, "mirth-agent-tools")
   },
   {
+    name: "skill tool effectiveness evaluation",
+    command: "python",
+    args: ["tests/run_tool_evaluation.py", "--iterations", "5"],
+    cwd: root
+  },
+  {
     name: "npx installer dry-run",
     command: "node",
     args: ["bin/mirth-connect-skills.js", "init", "--target", ".npx-smoke", "--dry-run"],

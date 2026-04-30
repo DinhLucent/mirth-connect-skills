@@ -29,6 +29,14 @@ for (const file of fs.readdirSync(path.join(root, "mirth-agent-tools", "tests"))
   }
 }
 
+if (fs.existsSync(path.join(root, "tests"))) {
+  for (const file of fs.readdirSync(path.join(root, "tests"))) {
+    if (file.endsWith(".py") || file.endsWith(".md")) {
+      requiredFiles.push(path.join("tests", file));
+    }
+  }
+}
+
 const failures = [];
 
 for (const relativePath of requiredFiles) {
