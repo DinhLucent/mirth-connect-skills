@@ -191,6 +191,7 @@ That runs:
 - editable Python install with `dev,mcp`
 - Python unit tests
 - tool effectiveness evaluation against a mock Mirth REST API
+- sandbox installer checks for root, `.mirth`, legacy, and invalid-option flows
 - npx installer dry-run
 - `npm pack --dry-run`
 
@@ -201,6 +202,14 @@ npm run eval:tools
 ```
 
 The evaluation starts a local mock Mirth REST API, runs the real Python tools against it, measures latency and request counts, checks backup/audit/redaction behavior, and writes a JSON report under `tests/reports/`.
+
+Run only the installer sandbox checks:
+
+```bash
+npm run sandbox:test
+```
+
+The sandbox runner creates isolated test projects under `tests/.sandboxes/`, verifies install layout and compileability, then removes the sandboxes unless run with `node tests/run_sandbox_checks.js --keep`.
 
 ## License
 

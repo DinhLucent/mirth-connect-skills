@@ -49,6 +49,12 @@ const checks = [
     cwd: root
   },
   {
+    name: "sandbox installer checks",
+    command: "node",
+    args: ["tests/run_sandbox_checks.js"],
+    cwd: root
+  },
+  {
     name: "npm pack dry-run",
     command: "npm",
     args: ["pack", "--dry-run"],

@@ -13,6 +13,7 @@
     "scripts/",
     "tests/*.md",
     "tests/*.py",
+    "tests/*.js",
     "tests/reports/.gitkeep",
     "mirth-agent-tools/",
     "mirth-connect-operator/",
@@ -22,6 +23,7 @@
     "audit": "node scripts/audit-format.js",
     "check": "node scripts/local-check.js",
     "eval:tools": "python tests/run_tool_evaluation.py --iterations 5",
+    "sandbox:test": "node tests/run_sandbox_checks.js",
     "test": "python -m compileall mirth-agent-tools/src && python -m pytest mirth-agent-tools && node bin/mirth-connect-skills.js init --target .npx-smoke --dry-run && npm pack --dry-run"
   },
   "keywords": [

@@ -15,6 +15,7 @@ mirth-agent-tools/tests/.tmp/
 *.egg-info/
 mirth-agent-tools/src/*.egg-info/
 tests/.tmp/
+tests/.sandboxes/
 tests/reports/*.json
 tests/reports/*.jsonl
 !tests/reports/.gitkeep

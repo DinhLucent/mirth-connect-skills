@@ -20,3 +20,11 @@ The suite starts a local mock Mirth REST API, executes the real Python tool laye
 - CLI fallback whitelist rejection
 
 Generated JSON reports are written to `tests/reports/` and are ignored by git.
+
+Installer sandbox checks create isolated project folders under `tests/.sandboxes/`, verify default install, `.mirth` runtime install, full dry-run, legacy skill-only install, force/idempotency behavior, package contents, and invalid-option paths, then remove the sandboxes by default.
+
+```bash
+npm run sandbox:test
+```
+
+Use `node tests/run_sandbox_checks.js --keep` when you want to inspect generated sandboxes manually.
