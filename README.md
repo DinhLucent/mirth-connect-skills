@@ -53,6 +53,6 @@ mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--leg
 
 - `mirth-connect-operator/`: Codex skill instructions.
 - `mirth-agent-tools/`: Python package exposing Mirth REST tools, MCP server, local CLI, backups, audit logs, and tests.
-- `ci/github-actions-ci.yml`: GitHub Actions workflow template. Copy it to `.github/workflows/ci.yml` to enable CI; pushing workflow files requires a GitHub token with `workflow` scope.
+- `.github/workflows/ci.yml`: GitHub Actions workflow for compile, install, tests, npx dry-run, and npm pack dry-run.
 
 See [mirth-agent-tools/README.md](mirth-agent-tools/README.md) for tool usage.
