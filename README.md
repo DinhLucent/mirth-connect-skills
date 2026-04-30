@@ -53,6 +53,15 @@ mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--leg
 
 - `mirth-connect-operator/`: Codex skill instructions.
 - `mirth-agent-tools/`: Python package exposing Mirth REST tools, MCP server, local CLI, backups, audit logs, and tests.
-- `.github/workflows/ci.yml`: GitHub Actions workflow for compile, install, tests, npx dry-run, and npm pack dry-run.
+
+## Local Testing And Audit
+
+This repository does not include GitHub Actions CI. Run the local batch check instead:
+
+```bash
+npm run check
+```
+
+That runs formatting/newline audit, Python compile, editable install with `dev,mcp`, pytest, npx dry-run, and npm pack dry-run.
 
 See [mirth-agent-tools/README.md](mirth-agent-tools/README.md) for tool usage.
