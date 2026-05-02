@@ -643,8 +643,15 @@ def execute_operation(
         return remove_messages(str(channel_id), status=status, approval_token=approval_token, settings=settings)
     if operation == "clear_statistics":
         return clear_statistics(str(channel_id) if channel_id else None, approval_token=approval_token, settings=settings)
-    if operation in {"start_channel", "stop_channel", "pause_channel", "resume_channel", "halt_channel"}:
-        return globals()[operation](str(channel_id), approval_token=approval_token, settings=settings)
+    _lifecycle_dispatch = {
+        "start_channel": start_channel,
+        "stop_channel": stop_channel,
+        "pause_channel": pause_channel,
+        "resume_channel": resume_channel,
+        "halt_channel": halt_channel,
+    }
+    if operation in _lifecycle_dispatch:
+        return _lifecycle_dispatch[operation](str(channel_id), approval_token=approval_token, settings=settings)
     if operation == "get_messages":
         return get_messages(str(channel_id), include_content=include_content, status=status, settings=settings)
     if operation == "restore_channel":

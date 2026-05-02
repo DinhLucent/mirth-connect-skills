@@ -1,102 +1,92 @@
-# Mirth Connect Skills
+﻿# Mirth Connect Skills
 
 Codex skill and Python tool server for operating Mirth Connect through controlled REST API tools, XML backup/restore, audit logs, rollback support, MCP, and CLI fallback.
 
-This project is designed for agent-assisted Mirth operations where the agent can inspect, export, update, deploy, start/stop channels, read statistics/messages, and ask for specific user input when credentials, permissions, endpoints, or safety gates block an action.
+Designed for agent-assisted Mirth operations: inspect, export, update, deploy, start/stop channels, read statistics and messages, with structured user prompts when credentials, permissions, endpoints, or safety gates block an action.
 
 > Mirth Connect is a healthcare integration engine. Treat this repository as operational tooling: use a dedicated Mirth account, keep audit logs, and avoid returning raw PHI unless explicitly required.
 
 ## Features
 
-- Codex skill for Mirth Connect operator workflows.
-- Python package with REST-first Mirth client and local CLI.
-- Optional MCP server for exposing tools to agent runtimes.
-- XML-first channel export/import/update for version compatibility.
-- Backup and rollback helpers before write operations.
-- Audit logs for write and destructive actions.
-- Safety gates for full access, destructive actions, and production writes.
-- Local npx installer for project, user, admin, and legacy Codex locations.
-- Local test and effectiveness evaluation suite with a mock Mirth REST API.
+- **Codex skill** for Mirth Connect operator workflows.
+- **Python package** with REST-first Mirth client and local CLI.
+- **MCP server** with ToolAnnotations (readOnlyHint/destructiveHint) and full docstrings for LLM agent discovery.
+- **XML-first** channel export/import/update for version compatibility.
+- **Backup-before-write** and rollback helpers for all write operations.
+- **Audit trail** (JSONL) for write and destructive actions.
+- **PHI redaction** for HL7 PID segments, email, phone, SSN, MRN, DOB.
+- **Safety gates** for full access, destructive actions, production writes, and approval tokens.
+- **Plan/Execute two-phase** workflow for safe operation planning.
+- **CLI fallback** with command allowlist when REST API is unavailable.
+- **Local test suite** with mock Mirth REST API and sandbox installer checks.
 
 ## Requirements
 
 - Node.js 18 or newer.
 - Python 3.10 or newer.
 - Mirth Connect reachable over REST API, usually at `https://localhost:8443`.
-- A dedicated Mirth user with the permissions needed for the operations you want the agent to perform.
+- A dedicated Mirth user with permissions for the operations the agent performs.
 
 ## Quickstart
 
-For a full Mirth operator install, use this repository's installer:
+Full Mirth operator install:
 
 ```bash
 npx github:DinhLucent/mirth-connect-skills full
 ```
 
-That installs:
+This installs:
 
-- the Codex skill into `.agents/skills/mirth-connect-operator`
-- the Python tool server into `.mirth/mirth-agent-tools`
-- Python package dependencies with the optional MCP extra
-- a local `.mirth/mirth-agent-tools/.env` copied from `.env.example`
-- `.mirth/.gitignore` to keep `.env`, backups, and logs out of git
+- Codex skill into `.agents/skills/mirth-connect-operator`
+- Python tool server into `.mirth/mirth-agent-tools`
+- Python dependencies with optional MCP extra
+- Local `.env` from `.env.example`
+- `.mirth/.gitignore` to protect credentials, backups, and logs
 
-Then edit `.mirth/mirth-agent-tools/.env` with your Mirth URL and credentials:
+Then configure and verify:
 
 ```bash
 cd .mirth/mirth-agent-tools
+# Edit .env with your Mirth URL and credentials
 mirth-agent-tools health_check
 ```
 
 ## Skill-Only Install
 
-The shared Skills CLI flow used by repositories such as `mattpocock/skills` is supported:
+Using the shared Skills CLI (`mattpocock/skills` compatible):
 
 ```bash
 npx skills@latest add DinhLucent/mirth-connect-skills
 ```
 
-For a non-interactive Codex install:
+Non-interactive Codex install:
 
 ```bash
 npx skills@latest add DinhLucent/mirth-connect-skills --agent codex --skill mirth-connect-operator -y --copy
 ```
 
-This installs the Codex skill instructions only. It does not install `mirth-agent-tools`, Python dependencies, MCP runtime, or `.env`. For full-access operation, use `npx github:DinhLucent/mirth-connect-skills full`.
+This installs skill instructions only (no Python tools, MCP, or `.env`). Use the full installer for operational access.
 
-## Full Tool-Server Install
-
-Install the skill and Python tools into the current project without running pip:
+## Tool-Server Install
 
 ```bash
+# Minimal: skill + tool files only
 npx github:DinhLucent/mirth-connect-skills init
-```
 
-Install everything in one command:
-
-```bash
+# Full: skill + tools + pip install + MCP + .env
 npx github:DinhLucent/mirth-connect-skills init --install-python --install-mcp --create-env
-```
 
-Install the tool runtime under a hidden project folder:
-
-```bash
+# Under hidden project folder
 npx github:DinhLucent/mirth-connect-skills init --mirth-dir .mirth --install-python --install-mcp --create-env
-```
 
-Install globally for the current user:
-
-```bash
+# Global user install
 npx github:DinhLucent/mirth-connect-skills init --global
-```
 
-Install in the admin skill location:
-
-```bash
+# Admin install
 npx github:DinhLucent/mirth-connect-skills init --admin
 ```
 
-Global npm install is also supported:
+Global npm install:
 
 ```bash
 npm install -g github:DinhLucent/mirth-connect-skills
@@ -105,53 +95,65 @@ mirth-connect-skills init --global
 
 ## Install Locations
 
-- Project install: `.agents/skills/mirth-connect-operator`
-- User/global install: `~/.agents/skills/mirth-connect-operator`
-- Admin install: `/etc/codex/skills/mirth-connect-operator`
-- Legacy Codex fallback: `.codex/skills/mirth-connect-operator` with `--legacy-codex`
+| Scope | Skill Path | Tool Path |
+|-------|-----------|-----------|
+| Project | `.agents/skills/mirth-connect-operator` | `mirth-agent-tools` or `.mirth/mirth-agent-tools` |
+| User/Global | `~/.agents/skills/mirth-connect-operator` | `~/.agents/tools/mirth-agent-tools` |
+| Admin | `/etc/codex/skills/mirth-connect-operator` | -- |
+| Legacy Codex | `.codex/skills/mirth-connect-operator` | -- |
 
-The installer copies the Python tools to `mirth-agent-tools` for plain project `init` installs, `.mirth/mirth-agent-tools` for project `full` installs, or `~/.agents/tools/mirth-agent-tools` for user/global installs. Use `--mirth-dir <dir>` to choose a different hidden project runtime directory. When a project-local runtime directory is used, the installer writes `<dir>/.gitignore` so credentials and runtime logs are not committed accidentally.
+## MCP Server
 
-## Configure Mirth Tools
-
-After installation, configure credentials and install the Python package:
-
-```bash
-cd mirth-agent-tools
-cp .env.example .env
-python -m pip install -e ".[dev]"
-```
-
-For MCP support:
+The MCP server exposes 34 tools with proper `ToolAnnotations` for client-side safety classification:
 
 ```bash
 python -m pip install -e ".[mcp]"
+mirth-agent-mcp
 ```
 
-Run a basic health check:
+Tools are categorized by safety tier:
 
-```bash
-mirth-agent-tools health_check
+| Tier | Annotation | Examples |
+|------|-----------|----------|
+| **Read-only** | `readOnlyHint=true` | health_check, list_channels, get_messages, plan_operation |
+| **Write** | `readOnlyHint=false` | deploy_channel, update_channel, import_channel |
+| **Destructive** | `destructiveHint=true` | delete_channel, redeploy_all, remove_messages |
+
+Every tool includes a comprehensive docstring describing purpose, parameters, safety requirements, and audit behavior.
+
+## Safety Model
+
+Write operations are gated by environment flags:
+
+- `MIRTH_FULL_ACCESS=true` enables write-capable tools.
+- `MIRTH_ALLOW_DESTRUCTIVE=true` enables delete, clear, remove, and redeploy-all.
+- `MIRTH_ALLOW_PROD_WRITE=true` required when `MIRTH_ENV=prod`.
+- `MIRTH_REQUIRE_APPROVAL=true` + `MIRTH_APPROVAL_TOKEN` for approval-gated workflows.
+- `MIRTH_DRY_RUN=true` logs the action without executing.
+- `MIRTH_REDACT_PHI=true` redacts PHI from message content.
+- `MIRTH_ALLOWED_HOSTS` restricts allowed Mirth API hosts.
+
+When blocked, tools return `needs_user_input=true` with a specific `user_question` for the operator.
+
+## CLI Options
+
+```text
+mirth-connect-skills init [options]
+mirth-connect-skills full [options]
+
+Options:
+  --target <dir>        Install into specific project directory
+  --global              Install into user's Codex skill/tool locations
+  --admin               Install into /etc/codex/skills
+  --legacy-codex        Also install into older .codex/skills location
+  --force               Overwrite existing destination folders
+  --skip-tools          Install only the Codex skill
+  --install-python      Run pip install inside tool server
+  --install-mcp         Add MCP extra to pip install
+  --create-env          Copy .env.example to .env
+  --mirth-dir <dir>     Install tools under <dir>/mirth-agent-tools
+  --dot-mirth           Alias for --mirth-dir .mirth
 ```
-
-## npx Options
-
-```bash
-mirth-connect-skills init [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--skip-tools] [--install-python] [--install-mcp] [--create-env] [--mirth-dir <dir>]
-mirth-connect-skills full [--target <dir>] [--global] [--admin] [--force] [--legacy-codex] [--python <cmd>] [--mirth-dir <dir>]
-```
-
-- `--target <dir>` installs into a specific project directory.
-- `--global` installs into the current user's Codex skill and tool locations.
-- `--admin` installs into `/etc/codex/skills/mirth-connect-operator`.
-- `--legacy-codex` also installs the skill into the older `.codex/skills` location.
-- `--force` overwrites existing destination folders.
-- `--skip-tools` installs only the Codex skill.
-- `--install-python` runs `python -m pip install -e ".[dev]"` inside the installed tool server.
-- `--install-mcp` adds the optional MCP extra to `--install-python`.
-- `--create-env` copies `.env.example` to `.env` if `.env` does not exist.
-- `--mirth-dir <dir>` installs project-local tools under `<dir>/mirth-agent-tools`; `full` defaults to `.mirth`.
-- `--dot-mirth` is an alias for `--mirth-dir .mirth`.
 
 ## Repository Layout
 
@@ -160,56 +162,29 @@ mirth-connect-skills/
   bin/                         npx installer
   mirth-connect-operator/      Codex skill instructions and agent metadata
   mirth-agent-tools/           Python REST/MCP/CLI tool server
+    src/mirth_agent_tools/
+      client.py                Mirth REST API client
+      mcp_server.py            MCP server with ToolAnnotations
+      tools.py                 Tool functions with safety gates
+      safety.py                Layered access control
+      audit.py                 JSONL audit trail
+      redaction.py             PHI redaction (HL7, email, phone, SSN)
+      config.py                Environment-based configuration
+      discovery.py             API endpoint auto-discovery
+      cli_fallback.py          mccommand CLI fallback
+      xml_utils.py             Channel XML parsing and diff
+    tests/                     Unit tests
   scripts/                     Local audit and check runners
   tests/                       Tool effectiveness evaluation suite
 ```
 
-## Safety Model
-
-The tools are intentionally full-access capable, but write operations are gated by environment flags:
-
-- `MIRTH_FULL_ACCESS=true` enables write-capable tools.
-- `MIRTH_ALLOW_DESTRUCTIVE=true` enables delete, clear, remove, and redeploy-all style operations.
-- `MIRTH_ALLOW_PROD_WRITE=true` is required before writing when `MIRTH_ENV=prod`.
-
-When blocked by auth, TLS, missing endpoints, ambiguous channels, permissions, or disabled safety flags, tools return a structured result with `needs_user_input=true` and a specific question for the user.
-
-Message content is metadata-only by default. Raw message content should be requested deliberately, and PHI redaction is applied before returning content where possible.
-
-## Local Testing And Audit
-
-This repository does not include GitHub Actions CI. Run the local batch check instead:
+## Local Testing
 
 ```bash
-npm run check
+npm run check            # Full local check suite
+npm run eval:tools       # Tool effectiveness against mock Mirth API
+npm run sandbox:test     # Installer sandbox checks
 ```
-
-That runs:
-
-- formatting and install-path audit
-- Python `compileall`
-- editable Python install with `dev,mcp`
-- Python unit tests
-- tool effectiveness evaluation against a mock Mirth REST API
-- sandbox installer checks for root, `.mirth`, legacy, and invalid-option flows
-- npx installer dry-run
-- `npm pack --dry-run`
-
-Run only the effectiveness evaluation:
-
-```bash
-npm run eval:tools
-```
-
-The evaluation starts a local mock Mirth REST API, runs the real Python tools against it, measures latency and request counts, checks backup/audit/redaction behavior, and writes a JSON report under `tests/reports/`.
-
-Run only the installer sandbox checks:
-
-```bash
-npm run sandbox:test
-```
-
-The sandbox runner creates isolated test projects under `tests/.sandboxes/`, verifies install layout and compileability, then removes the sandboxes unless run with `node tests/run_sandbox_checks.js --keep`.
 
 ## License
 
